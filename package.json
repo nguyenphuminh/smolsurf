@@ -1,0 +1,31 @@
+{
+  "name": "smolsurf",
+  "version": "0.1.0",
+  "description": "Smolsurf is a text-based web browser",
+  "main": "index.js",
+  "scripts": {
+    "build": "npx tsc & pkg index.js --target node18 -o smolsurf"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/nguyenphuminh/smolsurf.git"
+  },
+  "keywords": [
+    "browser",
+    "web",
+    "engine",
+    "html",
+    "http"
+  ],
+  "author": "nguyenphuminh",
+  "license": "GPL-3.0",
+  "bugs": {
+    "url": "https://github.com/nguyenphuminh/smolsurf/issues"
+  },
+  "homepage": "https://github.com/nguyenphuminh/smolsurf#readme",
+  "devDependencies": {
+    "@types/node": "^22.13.1",
+    "pkg": "^5.8.1",
+    "typescript": "^5.7.3"
+  }
+}
