@@ -9,6 +9,7 @@ export class CLI {
 
         for (;;) {
             console.clear();
+            execSync("cls", { stdio: "inherit" });
             execSync("title smolsurf");
 
             try {
@@ -33,8 +34,6 @@ export class CLI {
                             
                             resolve();
                         } catch (e) {
-                            // console.log(e);
-
                             reject(e);
                         }
 

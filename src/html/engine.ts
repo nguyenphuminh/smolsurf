@@ -34,7 +34,7 @@ export type AST = (string | TagBody)[];
 export class Compiler {
     tokenize(input: string): Token[] {
         // Blud I'm too lazy to implement proper SGML for now
-        input = input.replaceAll("\r", "").replace(/<!DOCTYPE\s+html.*?>/gi, "");
+        input = input.replace(/<!DOCTYPE\s+html.*?>/gi, "");
         // Blud I'm too lazy to parse JS and CSS for now
         input = input.replace(/<script[^>]*?>[\s\S]*?<\/script\s*>/gi, "")
                      .replace(/<style[^>]*?>[\s\S]*?<\/style\s*>/gi, "");
@@ -52,11 +52,19 @@ export class Compiler {
         let isText = false;
         // Variable to record current line num, used for errors
         let currentLine = 1;
+        let column = 1;
 
         for (let pointer = 0; pointer < input.length; pointer++) {
             const prevChar = input[pointer-1];
             const char = input[pointer];
             const nextChar = input[pointer+1];
+
+            // New line
+            if (char === "\n") {
+                // Increase line number and reset column
+                currentLine++;
+                column = 1;
+            }
 
             // Handle comments
             if (isComment) {
@@ -79,7 +87,7 @@ export class Compiler {
                         type: "string",
                         value: temp,
                         line: currentLine,
-                        col: pointer+1
+                        col: column
                     });
                     // Reset temp value
                     temp = "";
@@ -103,7 +111,7 @@ export class Compiler {
                         type: "text",
                         value: temp,
                         line: currentLine,
-                        col: pointer+1
+                        col: column
                     });
                     // Reset temp value
                     temp = "";
@@ -133,7 +141,7 @@ export class Compiler {
                                 type: "punc",
                                 value: char,
                                 line: currentLine,
-                                col: pointer+1
+                                col: column
                             });
 
                             // Begin finding text
@@ -154,10 +162,6 @@ export class Compiler {
                     }
 
                 // Identifiers
-                case " ":
-                case "\n":
-                    break;
-
                 default:
                     // A valid unquoted attribute value in HTML is any string of text that is not 
                     // the empty string and that doesn’t contain spaces, tabs, line feeds, form 
@@ -181,19 +185,16 @@ export class Compiler {
                                 type: "identifier",
                                 value: temp,
                                 line: currentLine,
-                                col: pointer+1
+                                col: column
                             });
                             // Reset temp value
                             temp = "";
                         }
-                    } else {
-                        throw new Error(`Compile time error: Unexpected character at line ${currentLine} col ${pointer+1}: "${char}".`);
                     }
             }
-        }
 
-        // If there is no closing quotation mark, throw en error
-        if (isString) throw new Error(`Compile time error: No ending quotation mark.`);
+            column++;
+        }
 
         return tokens;
     }
