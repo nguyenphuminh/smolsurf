@@ -474,7 +474,7 @@ export class Compiler {
                 break;
             
             case "li":
-                final.textStream = `- ${final.textStream}\n`;
+                final.textStream = `- ${final.textStream}${final.textStream !== "" ? "\n" : ""}`;
 
                 break;
 
