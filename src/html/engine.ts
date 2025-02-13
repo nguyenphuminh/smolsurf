@@ -1,3 +1,4 @@
+// import { writeFileSync } from "fs";
 import { decodeHtmlEntities } from "./encoding";
 
 // export const IDEN_CHARACTERS = "0123456789abcdefghijklmnopqrstuvwxyz-_.:%";
@@ -38,6 +39,8 @@ export class Compiler {
         // Blud I'm too lazy to parse JS and CSS for now
         input = input.replace(/<script[^>]*?>[\s\S]*?<\/script\s*>/gi, "")
                      .replace(/<style[^>]*?>[\s\S]*?<\/style\s*>/gi, "");
+
+        // writeFileSync("./for-testing.html", input);
 
         const tokens: Token[] = [];
 
@@ -342,6 +345,8 @@ export class Compiler {
                                             ) {
                                                 el.children.push(...bodies.slice(index+1, bodies.length));
                                                 bodies.splice(index+1, bodies.length);
+
+                                                break;
                                             }
                                         }
                                     } else {
@@ -415,99 +420,73 @@ export class Compiler {
 
         const final: Result = { textStream: "", options: {} };
 
-        if (el.children.length <= 1) {
-            const isEmpty = el.children.length === 0;
+        // Get content from children
+        for (const childEl of el.children) {
+            const { textStream, options } = this.getContent(childEl, [ el.name, ...scope ]);
 
-            // Furthest text content
-            if (isEmpty || typeof el.children[0] === "string") {
-                let value = this.sanitize(isEmpty ? "" : el.children[0] as string);
+            final.textStream += textStream;
+            Object.assign(final.options, options);
+        }
 
-                switch (el.name) {
-                    case "html":
-                        // html tag should have no parents
-                        if (scope.length === 0) {
-                            final.textStream += value;
-                        }
-
-                    case "body":
-                        // body tag should only have html as parent
-                        if (scope.length === 1 && scope[0] === "html") {
-                            final.textStream += value;
-                        }
-
-                        break;
-
-                    case "title":
-                        final.options.title = this.sanitize(value);
-
-                        break;
-                    
-                    case "p":
-                    case "h1":
-                    case "h2":
-                    case "h3":
-                    case "h4":
-                    case "h5":
-                    case "h6":
-                        let offset = "";    
-
-                        if (final.textStream.slice(-2) === "\n\n") {
-                            offset = "";
-                        } else if (final.textStream.slice(-1) === "\n") {
-                            offset += "\n";
-                        } else {
-                            offset += "\n\n";
-                        }
-
-                        final.textStream += `${offset}${value}\n\n`;
-                    
-                        break;
-                    
-                    case "br":
-                    case "hr":
-                        final.textStream += "\n";
-
-                        break;
-                    
-                    case "div":
-                        final.textStream += `\n${value}\n`;
-
-                        break;
-
-                    case "span":
-                    case "a":
-                    case "button":
-                        final.textStream += value;
-
-                        break;
-                    
-                    case "li":
-                        final.textStream += `- ${value}\n`;
-
-                        break;
-                    
-                    default:
-                        // For unknown tags, we just treat them like normal text
-                        final.textStream += value;
-
-                        break;
+        switch (el.name) {
+            case "html":
+                // html tag should have no parents
+                if (scope.length !== 0) {
+                    final.textStream = "";
                 }
-            }
-            // Not furthest text content, search until find furthest text content
-            else {
-                const { textStream, options } = this.getContent(el.children[0], [ el.name, ...scope ]);  
- 
-                final.textStream += textStream;
-                Object.assign(final.options, options);
-            }
-        } else {
-            // Get content from children
-            for (const childEl of el.children) {
-                const { textStream, options } = this.getContent(childEl, [ el.name, ...scope ]);  
 
-                final.textStream += textStream;
-                Object.assign(final.options, options);
-            }
+                break;
+
+            case "body":
+                // body tag should only have html as parent
+                if (scope.length !== 1 || scope[0] !== "html") {
+                    final.textStream = "";
+                }
+
+                break;
+
+            case "title":
+                final.options.title = final.textStream;
+                final.textStream = "";
+
+                break;
+            
+            case "p":
+            case "h1":
+            case "h2":
+            case "h3":
+            case "h4":
+            case "h5":
+            case "h6":
+                final.textStream = `\n\n${final.textStream}\n\n`;
+     
+                break;
+            
+            case "br":
+            case "hr":
+                final.textStream = "\n";
+
+                break;
+            
+            case "div":
+                final.textStream += `\n${final.textStream}\n`;
+
+                break;
+            
+            case "li":
+                final.textStream = `- ${final.textStream}\n`;
+
+                break;
+
+            case "template":
+                final.textStream = "";
+
+                break;
+            
+            case "img":
+                final.textStream = typeof el.attributes.alt === "string" ? el.attributes.alt : final.textStream;
+
+                break;
         }
 
         return final;

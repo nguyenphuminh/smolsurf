@@ -5,7 +5,7 @@ import { execSync } from "child_process";
 export class CLI {
     async listen() {
         execSync("@echo off", { stdio: "inherit" });
-        execSync("chcp 65001", { stdio: "inherit" });
+        execSync("chcp 65001 >nul", { stdio: "inherit" });
 
         for (;;) {
             console.clear();
