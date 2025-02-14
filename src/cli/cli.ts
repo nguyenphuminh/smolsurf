@@ -1,8 +1,21 @@
 import { Compiler, Result } from "../html/engine";
 import readline from "readline";
 import { execSync } from "child_process";
+import { readFileSync } from "fs";
+
+export interface CLIOptions {
+    cargs: string[];
+}
 
 export class CLI {
+    public cargs: string[];
+    public url: string;
+
+    constructor(options: CLIOptions) {
+        this.cargs = options.cargs || [];
+        this.url = this.cargs[2] || "";
+    }
+
     async listen() {
         execSync("@echo off", { stdio: "inherit" });
         execSync("chcp 65001 >nul", { stdio: "inherit" });
@@ -12,55 +25,66 @@ export class CLI {
             execSync("cls", { stdio: "inherit" });
             execSync("title smolsurf");
 
-            try {
-                const input = readline.createInterface({
-                    input: process.stdin,
-                    output: process.stdout,
-                    terminal: true
-                });
-        
-                await new Promise<void>((resolve, reject) => {
+            if (!this.url) {
+                this.url = await new Promise((resolve, reject) => {
+                    const input = readline.createInterface({
+                        input: process.stdin,
+                        output: process.stdout,
+                        terminal: true
+                    });
+
                     input.question("Enter URL: ", async (url) => {
-                        try {
-                            const result = await this.load(url);
-
-                            if (result.options.title !== "") { 
-                                execSync(`title smolsurf: ${result.options.title}`);
-                            } else {
-                                execSync(`title smolsurf: ${url}`);
-                            }
-
-                            console.log(result.textStream);
-                            
-                            resolve();
-                        } catch (e) {
-                            reject(e);
-                        }
-
+                        resolve(url);
                         input.close();
                     })
                 });
+            }
+
+            try {
+                const result = await this.load(this.url);
+
+                if (result.options.title !== "") { 
+                    execSync(`title smolsurf: ${result.options.title}`);
+                } else {
+                    execSync(`title smolsurf: ${this.url}`);
+                }
+
+                console.log(result.textStream);
             } catch (e) {
                 console.log("Unexpected error.")
             }
+            
+            this.url = "";
 
             execSync("pause", { stdio: "inherit" });
         }
     }
 
     async load(url: string): Promise<Result> {
-        const response = await fetch(url);
-        const contentType = response.headers.get("content-type");
+        let code = "";
 
-        if (contentType && contentType.includes("text/html")) {
-            const code = await response.text();
+        let urlTrimStart = url.trimStart();
 
-            const compiler = new Compiler();
-            const result = compiler.interpret(compiler.parse(compiler.tokenize(code)));
-
-            return result;
-        } else {
-            throw new Error("Unsupported content type.");
+        // Handle local html files
+        if (urlTrimStart.startsWith("file:///")) {
+            code = readFileSync(urlTrimStart.slice(8)).toString("utf8");
         }
+        // Handle html files served through https/http
+        else {
+            const offset = urlTrimStart.startsWith("https://") || urlTrimStart.startsWith("http://") ? "" : "https://";
+            const response = await fetch(offset + url);
+            const contentType = response.headers.get("content-type");
+
+            if (contentType && contentType.includes("text/html")) {
+                code = await response.text();
+            } else {
+                throw new Error("Unsupported content type.");
+            }
+        }
+
+        const compiler = new Compiler();
+        const result = compiler.interpret(compiler.parse(compiler.tokenize(code)));
+
+        return result;
     }
 }

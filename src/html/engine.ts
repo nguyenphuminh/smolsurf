@@ -31,6 +31,7 @@ export interface Scope {
 
 export type AST = (string | TagBody)[];
 
+export type stringType = "\"" | "'" | "";
 
 export class Compiler {
     tokenize(input: string): Token[] {
@@ -48,7 +49,7 @@ export class Compiler {
         let temp = "";
 
         // A flag used to record string tokens
-        let isString = false;
+        let stringType: stringType = "";
         // A flag used to record comments
         let isComment = false;
         // A flag used to record text
@@ -73,18 +74,19 @@ export class Compiler {
             if (isComment) {
                 if (input.slice(pointer, pointer+3) === "-->") { 
                     isComment = false;
-                    pointer = pointer+3;
-                } else {
-                    continue;
+
+                    pointer = pointer+2;
                 }
+
+                continue;
             }
 
             // Handle strings
-            if (isString) {
+            if (stringType !== "") {
                 // If current char is a quotation mark and the previous char is not a \, the string is complete
-                if (char === "\"" && prevChar !== "\\") {
+                if (char === stringType && prevChar !== "\\") {
                     // Reset flag
-                    isString = false;
+                    stringType = "";
                     // Push token
                     tokens.push({
                         type: "string",
@@ -136,7 +138,7 @@ export class Compiler {
                         // Comments
                         if (input.slice(pointer, pointer+4) === "<!--") {
                             isComment = true;
-                            pointer = pointer+4;
+                            pointer = pointer+3;
                         }
                         // Punctuations
                         else {
@@ -158,8 +160,9 @@ export class Compiler {
 
                 // Strings
                 case "\"":
+                case "'":
                     {
-                        isString = true;
+                        stringType = char;
 
                         break;
                     }
@@ -199,6 +202,8 @@ export class Compiler {
             column++;
         }
 
+        // writeFileSync("./tokens.json", JSON.stringify(tokens));
+
         return tokens;
     }
 
@@ -228,15 +233,15 @@ export class Compiler {
                                 attributes: {},
                                 children: [],
                                 stage: "name"
-                            });                            
+                            });
                         } else {
-                            throw new Error(`Compile time error: Unexpected punctuation at line ${token.line}.`);
+                            throw new Error(`Compile time error: Unexpected punctuation at line ${token.line}: "${token.value}"`);
                         }
 
                         break;
 
                     default:
-                        throw new Error(`Compile time error: Unexpected token at line ${token.line}.`);
+                        throw new Error(`Compile time error: Unexpected token at line ${token.line}: "${token.value}"`);
                 }
             } else {
                 const currentEl = bodies[bodies.length-1];
@@ -277,7 +282,7 @@ export class Compiler {
                         ) {
                             bodies.push(token.value);
                         } else {
-                            throw new Error(`Compile time error: Unexpected identifier at line ${token.line}.`);
+                            throw new Error(`Compile time error: Unexpected identifier at line ${token.line}: "${token.value}"`);
                         }
 
                         break;
@@ -291,7 +296,7 @@ export class Compiler {
                         ) {
                             bodies.push(`"${token.value}"`);
                         } else {
-                            throw new Error(`Compile time error: Unexpected string at line ${token.line}.`);
+                            throw new Error(`Compile time error: Unexpected string at line ${token.line}: "${token.value}"`);
                         }
 
                         break;
@@ -306,7 +311,7 @@ export class Compiler {
                         ) {
                             bodies.push(token.value);
                         } else {
-                            throw new Error(`Compile time error: Unexpected text at line ${token.line}.`);
+                            throw new Error(`Compile time error: Unexpected text at line ${token.line}: "${token.value}"`);
                         }
 
                         break;
@@ -350,7 +355,7 @@ export class Compiler {
                                             }
                                         }
                                     } else {
-                                        throw new Error(`Compile time error: Unexpected punctuation at line ${token.line}.`);
+                                        throw new Error(`Compile time error: Unexpected punctuation at line ${token.line}: "${token.value}"`);
                                     }
     
                                     count+=3;
@@ -376,7 +381,7 @@ export class Compiler {
                                 currentEl.strictlySingular = true;
                                 count+=1;
                             } else {
-                                throw new Error(`Compile time error: Unexpected punctuation at line ${token.line}.`);
+                                throw new Error(`Compile time error: Unexpected punctuation at line ${token.line}: "${token.value}"`);
                             }
                         }
 
@@ -388,7 +393,7 @@ export class Compiler {
                         break;
 
                     default:
-                        throw new Error(`Compile time error: Unexpected error at line ${token.line}.`);
+                        throw new Error(`Compile time error: Unexpected error at line ${token.line}: "${token.value}"`);
                 }
             }
         }
