@@ -1,7 +1,7 @@
 import { Compiler, Result } from "../html/engine";
 import readline from "readline";
 import { execSync } from "child_process";
-import { readFileSync } from "fs";
+import { existsSync, readFileSync } from "fs";
 
 export interface CLIOptions {
     cargs: string[];
@@ -68,6 +68,8 @@ export class CLI {
         // Handle local html files
         if (urlTrimStart.startsWith("file:///")) {
             code = readFileSync(urlTrimStart.slice(8)).toString("utf8");
+        } else if (existsSync(url)) {
+            code = readFileSync(url).toString("utf8"); 
         }
         // Handle html files served through https/http
         else {
