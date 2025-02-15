@@ -13,11 +13,11 @@ Smolsurf is a text-based web browser, which means it only renders web pages as t
 
 * A text-based command line interface.
 * A new html engine that does not follow any standards.
-* Only Windows support :/
+* Cross-platform support as long as Node.js is supported.
 
 ## Using Smolsurf
 
-You can download a binary from the releases page, or build from source.
+You can download a binary from the releases page, run compiled distribution, or build from source.
 
 ### Build from source
 
@@ -33,6 +33,11 @@ npm install
 4. Build:
 ```
 npm run build
+```
+
+But of course you can just do this to run directly in Node.js:
+```
+node .
 ```
 
 ## Short-term todos

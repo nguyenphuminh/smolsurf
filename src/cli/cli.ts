@@ -1,6 +1,5 @@
 import { Compiler, Result } from "../html/engine";
 import readline from "readline";
-import { execSync } from "child_process";
 import { existsSync, readFileSync } from "fs";
 
 export interface CLIOptions {
@@ -17,16 +16,13 @@ export class CLI {
     }
 
     async listen() {
-        execSync("@echo off", { stdio: "inherit" });
-        execSync("chcp 65001 >nul", { stdio: "inherit" });
-
         for (;;) {
-            console.clear();
-            execSync("cls", { stdio: "inherit" });
-            execSync("title smolsurf");
+            console.log("\x1b[H\x1b[2J\x1b[3J"); // Clears screen and scrollback
+            process.stdout.write("\x1bc"); // Resets terminal
+            process.title = "smolsurf";
 
             if (!this.url) {
-                this.url = await new Promise((resolve, reject) => {
+                this.url = await new Promise((resolve) => {
                     const input = readline.createInterface({
                         input: process.stdin,
                         output: process.stdout,
@@ -44,9 +40,9 @@ export class CLI {
                 const result = await this.load(this.url);
 
                 if (result.options.title !== "") { 
-                    execSync(`title smolsurf: ${result.options.title}`);
+                    process.title = "smolsurf: " + result.options.title;
                 } else {
-                    execSync(`title smolsurf: ${this.url}`);
+                    process.title = "smolsurf: " + this.url;
                 }
 
                 console.log(result.textStream);
@@ -56,7 +52,23 @@ export class CLI {
             
             this.url = "";
 
-            execSync("pause", { stdio: "inherit" });
+            // Pause and wait for key presses to exit site and search another
+            await new Promise<void>((resolve) => {
+                const input = readline.createInterface({
+                    input: process.stdin,
+                    output: process.stdout
+                });
+        
+                console.log("\nPress any key to continue...");
+        
+                process.stdin.setRawMode(true);
+                process.stdin.resume();
+                process.stdin.once("data", () => {
+                    process.stdin.setRawMode(false);
+                    input.close();
+                    resolve();
+                });
+            });
         }
     }
 

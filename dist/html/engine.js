@@ -1,0 +1,396 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.Compiler = exports.NUMERALS = void 0;
+// import { writeFileSync } from "fs";
+const encoding_1 = require("./encoding");
+// export const IDEN_CHARACTERS = "0123456789abcdefghijklmnopqrstuvwxyz-_.:%";
+exports.NUMERALS = "0123456789";
+class Compiler {
+    tokenize(input) {
+        // Blud I'm too lazy to implement proper SGML for now
+        input = input.replace(/<!DOCTYPE\s+html.*?>/gi, "");
+        // Blud I'm too lazy to parse JS and CSS for now
+        input = input.replace(/<script[^>]*?>[\s\S]*?<\/script\s*>/gi, "")
+            .replace(/<style[^>]*?>[\s\S]*?<\/style\s*>/gi, "");
+        // writeFileSync("./for-testing.html", input);
+        const tokens = [];
+        // Stores identifier or string values
+        let temp = "";
+        // A flag used to record string tokens
+        let stringType = "";
+        // A flag used to record comments
+        let isComment = false;
+        // A flag used to record text
+        let isText = false;
+        // Variable to record current line num, used for errors
+        let currentLine = 1;
+        let column = 1;
+        for (let pointer = 0; pointer < input.length; pointer++) {
+            const prevChar = input[pointer - 1];
+            const char = input[pointer];
+            const nextChar = input[pointer + 1];
+            // New line
+            if (char === "\n") {
+                // Increase line number and reset column
+                currentLine++;
+                column = 1;
+            }
+            // Handle comments
+            if (isComment) {
+                if (input.slice(pointer, pointer + 3) === "-->") {
+                    isComment = false;
+                    pointer = pointer + 2;
+                }
+                continue;
+            }
+            // Handle strings
+            if (stringType !== "") {
+                // If current char is a quotation mark and the previous char is not a \, the string is complete
+                if (char === stringType && prevChar !== "\\") {
+                    // Reset flag
+                    stringType = "";
+                    // Push token
+                    tokens.push({
+                        type: "string",
+                        value: temp,
+                        line: currentLine,
+                        col: column
+                    });
+                    // Reset temp value
+                    temp = "";
+                }
+                // Or else we will push into temp
+                else {
+                    temp += char;
+                }
+                continue;
+            }
+            // Handle text
+            if (isText) {
+                // If current char is "<", then the text is complete
+                if (char === "<") {
+                    // Reset flag
+                    isText = false;
+                    // Push token
+                    tokens.push({
+                        type: "text",
+                        value: temp,
+                        line: currentLine,
+                        col: column
+                    });
+                    // Reset temp value
+                    temp = "";
+                }
+                // Or else we will push into temp
+                else {
+                    temp += char;
+                    continue;
+                }
+            }
+            switch (char) {
+                // Punctuations
+                case "<":
+                case ">":
+                case "/":
+                case "=":
+                    {
+                        // Comments
+                        if (input.slice(pointer, pointer + 4) === "<!--") {
+                            isComment = true;
+                            pointer = pointer + 3;
+                        }
+                        // Punctuations
+                        else {
+                            tokens.push({
+                                type: "punc",
+                                value: char,
+                                line: currentLine,
+                                col: column
+                            });
+                            // Begin finding text
+                            if (char === ">") {
+                                isText = true;
+                            }
+                        }
+                        break;
+                    }
+                // Strings
+                case "\"":
+                case "'":
+                    {
+                        stringType = char;
+                        break;
+                    }
+                // Identifiers
+                default:
+                    // A valid unquoted attribute value in HTML is any string of text that is not 
+                    // the empty string and that doesn’t contain spaces, tabs, line feeds, form 
+                    // feeds, carriage returns, ", ', `, =, <, or >.
+                    if (!(/[ \t\n\f\r"'`=<>]/.test(char)) /*IDEN_CHARACTERS.includes(char.toLowerCase())*/) {
+                        temp += char;
+                        // Check if next character is a whitespace, new line, or punctuations
+                        // If not, we will stop recording this identifier immediately
+                        if (nextChar === " " ||
+                            nextChar === "\n" ||
+                            nextChar === "\t" ||
+                            nextChar === ">" ||
+                            nextChar === "<" ||
+                            nextChar === "/" ||
+                            nextChar === "=") {
+                            // Push token
+                            tokens.push({
+                                type: "identifier",
+                                value: temp,
+                                line: currentLine,
+                                col: column
+                            });
+                            // Reset temp value
+                            temp = "";
+                        }
+                    }
+            }
+            column++;
+        }
+        // writeFileSync("./tokens.json", JSON.stringify(tokens));
+        return tokens;
+    }
+    parse(tokens) {
+        const ast = [];
+        let bodies = [];
+        for (let count = 0; count < tokens.length; count++) {
+            const token = tokens[count];
+            if (bodies.length === 0) {
+                switch (token.type) {
+                    case "identifier":
+                    case "text":
+                        ast.push(token.value);
+                        break;
+                    case "string":
+                        ast.push(`"${token.value}"`);
+                        break;
+                    case "punc":
+                        if (token.value === "<") {
+                            bodies.push({
+                                name: "",
+                                attributes: {},
+                                children: [],
+                                stage: "name"
+                            });
+                        }
+                        else {
+                            throw new Error(`Compile time error: Unexpected punctuation at line ${token.line}: "${token.value}"`);
+                        }
+                        break;
+                    default:
+                        throw new Error(`Compile time error: Unexpected token at line ${token.line}: "${token.value}"`);
+                }
+            }
+            else {
+                const currentEl = bodies[bodies.length - 1];
+                switch (token.type) {
+                    case "identifier":
+                        // Identifier for name assignment
+                        if (typeof currentEl !== "string" && currentEl.stage === "name" && currentEl.name === "") {
+                            currentEl.name = token.value;
+                            // Update stage to collecting attributes
+                            currentEl.stage = "attr";
+                        }
+                        // Identifier for attribute assignment
+                        else if (typeof currentEl !== "string" && currentEl.stage === "attr") {
+                            const supposedEqual = tokens[count + 1];
+                            const supposedValue = tokens[count + 2];
+                            // Attributes with values
+                            if (supposedEqual.type === "punc" &&
+                                supposedEqual.value === "=" &&
+                                (supposedValue.type === "string" || supposedValue.type === "identifier")) {
+                                currentEl.attributes[token.value] = supposedValue.value;
+                                count += 2;
+                            }
+                            // Boolean attributes
+                            else {
+                                currentEl.attributes[token.value] = true;
+                            }
+                            // Some how the token list have an identifier in the body
+                        }
+                        else if (
+                        // Current el is at body state means it had a closing >
+                        (typeof currentEl !== "string" && currentEl.stage === "body") ||
+                            // If current el is just text, then we don't care
+                            typeof currentEl === "string") {
+                            bodies.push(token.value);
+                        }
+                        else {
+                            throw new Error(`Compile time error: Unexpected identifier at line ${token.line}: "${token.value}"`);
+                        }
+                        break;
+                    case "string":
+                        // Some how the token list have a string in the body
+                        if ( // Current el is at body state means it had a closing >
+                        (typeof currentEl !== "string" && currentEl.stage === "body") ||
+                            // If current el is just text, then we don't care
+                            typeof currentEl === "string") {
+                            bodies.push(`"${token.value}"`);
+                        }
+                        else {
+                            throw new Error(`Compile time error: Unexpected string at line ${token.line}: "${token.value}"`);
+                        }
+                        break;
+                    case "text":
+                        // Can only push text as a children in body
+                        if (
+                        // Current el is at body state means it had a closing >
+                        (typeof currentEl !== "string" && currentEl.stage === "body") ||
+                            // If current el is just text, then we don't care
+                            typeof currentEl === "string") {
+                            bodies.push(token.value);
+                        }
+                        else {
+                            throw new Error(`Compile time error: Unexpected text at line ${token.line}: "${token.value}"`);
+                        }
+                        break;
+                    case "punc":
+                        if (
+                        // Current el is at body state means it had a closing >
+                        (typeof currentEl !== "string" && currentEl.stage === "body") ||
+                            // If current el is just text, then we don't care
+                            typeof currentEl === "string") {
+                            if (token.value === "<") {
+                                const supposedClosing = tokens[count + 1];
+                                const supposedTag = tokens[count + 2];
+                                const supposedEnd = tokens[count + 3];
+                                // Closing tag
+                                if (supposedClosing?.type === "punc" &&
+                                    supposedClosing?.value === "/") {
+                                    // Check if at least it is a closing tag
+                                    if (supposedTag?.type === "identifier" &&
+                                        supposedEnd?.type === "punc" &&
+                                        supposedEnd?.value === ">") {
+                                        // Check if it is the correct closing tag, only then will we push to parent
+                                        for (let index = bodies.length - 1; index >= 0; index--) {
+                                            const el = bodies[index];
+                                            if (typeof el !== "string" &&
+                                                !el.strictlySingular &&
+                                                supposedTag.value === el.name) {
+                                                el.children.push(...bodies.slice(index + 1, bodies.length));
+                                                bodies.splice(index + 1, bodies.length);
+                                                break;
+                                            }
+                                        }
+                                    }
+                                    else {
+                                        throw new Error(`Compile time error: Unexpected punctuation at line ${token.line}: "${token.value}"`);
+                                    }
+                                    count += 3;
+                                }
+                                // Opening tag
+                                else {
+                                    bodies.push({
+                                        name: "",
+                                        attributes: {},
+                                        children: [],
+                                        stage: "name"
+                                    });
+                                }
+                            }
+                        }
+                        // Singular tags
+                        if (token.value === "/" && typeof currentEl !== "string" && currentEl.stage !== "body") {
+                            const supposedEnd = tokens[count + 1];
+                            if (supposedEnd?.type === "punc" && supposedEnd?.value === ">") {
+                                currentEl.stage = "body";
+                                currentEl.strictlySingular = true;
+                                count += 1;
+                            }
+                            else {
+                                throw new Error(`Compile time error: Unexpected punctuation at line ${token.line}: "${token.value}"`);
+                            }
+                        }
+                        // End naming/attribute collecting and switch to collecting children
+                        if (token.value === ">" && typeof currentEl !== "string") {
+                            currentEl.stage = "body";
+                        }
+                        break;
+                    default:
+                        throw new Error(`Compile time error: Unexpected error at line ${token.line}: "${token.value}"`);
+                }
+            }
+        }
+        ast.push(...bodies);
+        return ast;
+    }
+    interpret(ast) {
+        const final = { textStream: "", options: {} };
+        for (const el of ast) {
+            const { textStream, options } = this.getContent(el);
+            final.textStream += textStream;
+            Object.assign(final.options, options);
+        }
+        return final;
+    }
+    getContent(el, scope = []) {
+        if (typeof el === "string")
+            return {
+                textStream: this.sanitize(el),
+                options: {}
+            };
+        const final = { textStream: "", options: {} };
+        // Get content from children
+        for (const childEl of el.children) {
+            const { textStream, options } = this.getContent(childEl, [el.name, ...scope]);
+            final.textStream += textStream;
+            Object.assign(final.options, options);
+        }
+        switch (el.name) {
+            case "html":
+                // html tag should have no parents
+                if (scope.length !== 0) {
+                    final.textStream = "";
+                }
+                break;
+            case "body":
+                // body tag should only have html as parent
+                if (scope.length !== 1 || scope[0] !== "html") {
+                    final.textStream = "";
+                }
+                break;
+            case "title":
+                final.options.title = final.textStream;
+                final.textStream = "";
+                break;
+            case "p":
+            case "h1":
+            case "h2":
+            case "h3":
+            case "h4":
+            case "h5":
+            case "h6":
+                final.textStream = `\n\n${final.textStream}\n\n`;
+                break;
+            case "br":
+            case "hr":
+                final.textStream = "\n";
+                break;
+            case "div":
+                final.textStream += `\n${final.textStream}\n`;
+                break;
+            case "li":
+                final.textStream = `- ${final.textStream}${final.textStream !== "" ? "\n" : ""}`;
+                break;
+            case "template":
+                final.textStream = "";
+                break;
+            case "img":
+                final.textStream = typeof el.attributes.alt === "string" ? el.attributes.alt : final.textStream;
+                break;
+        }
+        return final;
+    }
+    sanitize(text) {
+        return (0, encoding_1.decodeHtmlEntities)(text
+            .replaceAll("\n", "")
+            .replaceAll("\t", "")
+            .replace(/\s+/g, " ")
+            .trim());
+    }
+}
+exports.Compiler = Compiler;
