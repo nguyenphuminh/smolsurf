@@ -4,7 +4,7 @@
   "description": "Smolsurf is a text-based web browser",
   "main": "index.js",
   "scripts": {
-    "build": "npx tsc & pkg index.js --target node18 -o smolsurf"
+    "build": "npx tsc & pkg index.js --targets node18-win-x64,node18-linux-x64,node18-macos-x64 -o smolsurf"
   },
   "repository": {
     "type": "git",
