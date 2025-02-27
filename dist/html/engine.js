@@ -371,7 +371,7 @@ class Compiler {
                 final.textStream = "\n";
                 break;
             case "div":
-                final.textStream += `\n${final.textStream}\n`;
+                final.textStream = `\n${final.textStream}\n`;
                 break;
             case "li":
                 final.textStream = `- ${final.textStream}${final.textStream !== "" ? "\n" : ""}`;

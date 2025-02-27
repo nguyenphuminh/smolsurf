@@ -474,7 +474,7 @@ export class Compiler {
                 break;
             
             case "div":
-                final.textStream += `\n${final.textStream}\n`;
+                final.textStream = `\n${final.textStream}\n`;
 
                 break;
             

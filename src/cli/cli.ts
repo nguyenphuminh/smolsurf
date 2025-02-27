@@ -83,10 +83,19 @@ export class CLI {
         } else if (existsSync(url)) {
             code = readFileSync(url).toString("utf8"); 
         }
-        // Handle html files served through https/http
+        // Handle html files served through https/http or pass to a search engine
         else {
             const offset = urlTrimStart.startsWith("https://") || urlTrimStart.startsWith("http://") ? "" : "https://";
-            const response = await fetch(offset + url);
+            
+            let finalUrl = offset + url;
+
+            try {
+                new URL(finalUrl);
+            } catch (e) {
+                finalUrl = "https://www.mojeek.com/search?q=" + encodeURIComponent(url);
+            }
+
+            const response = await fetch(finalUrl);
             const contentType = response.headers.get("content-type");
 
             if (contentType && contentType.includes("text/html")) {
