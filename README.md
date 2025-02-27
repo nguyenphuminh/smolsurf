@@ -14,6 +14,7 @@ Smolsurf is a text-based web browser, which means it only renders web pages as t
 * A text-based command line interface.
 * A new html engine that does not follow any standards.
 * Cross-platform support as long as Node.js is supported.
+* Searches done through Mojeek.
 
 ## Using Smolsurf
 
