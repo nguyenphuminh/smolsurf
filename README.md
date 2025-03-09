@@ -46,6 +46,8 @@ node .
 * Support more HTML tags.
 * Support more encoded entities.
 * Make the UI less terrible.
+* Implement a way to interact with sites.
+* Support CSS?
 * idk it is kind of a mess right now so there are a lot of bugs to fix.
 * Port to Rust or Go.
 

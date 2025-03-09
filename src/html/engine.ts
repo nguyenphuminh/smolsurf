@@ -433,7 +433,7 @@ export class Compiler {
             Object.assign(final.options, options);
         }
 
-        switch (el.name) {
+        switch (el.name.toLowerCase()) {
             case "html":
                 // html tag should have no parents
                 if (scope.length !== 0) {
