@@ -176,13 +176,12 @@ class Compiler {
                                 children: [],
                                 stage: "name"
                             });
-                        }
-                        else {
+                        } /*else {
                             throw new Error(`Compile time error: Unexpected punctuation at line ${token.line}: "${token.value}"`);
-                        }
+                        }*/
                         break;
-                    default:
-                        throw new Error(`Compile time error: Unexpected token at line ${token.line}: "${token.value}"`);
+                    /*default:
+                        throw new Error(`Compile time error: Unexpected token at line ${token.line}: "${token.value}"`);*/
                 }
             }
             else {
@@ -218,10 +217,9 @@ class Compiler {
                             // If current el is just text, then we don't care
                             typeof currentEl === "string") {
                             bodies.push(token.value);
-                        }
-                        else {
+                        } /*else {
                             throw new Error(`Compile time error: Unexpected identifier at line ${token.line}: "${token.value}"`);
-                        }
+                        }*/
                         break;
                     case "string":
                         // Some how the token list have a string in the body
@@ -230,10 +228,9 @@ class Compiler {
                             // If current el is just text, then we don't care
                             typeof currentEl === "string") {
                             bodies.push(`"${token.value}"`);
-                        }
-                        else {
+                        } /*else {
                             throw new Error(`Compile time error: Unexpected string at line ${token.line}: "${token.value}"`);
-                        }
+                        }*/
                         break;
                     case "text":
                         // Can only push text as a children in body
@@ -243,10 +240,9 @@ class Compiler {
                             // If current el is just text, then we don't care
                             typeof currentEl === "string") {
                             bodies.push(token.value);
-                        }
-                        else {
+                        } /*else {
                             throw new Error(`Compile time error: Unexpected text at line ${token.line}: "${token.value}"`);
-                        }
+                        }*/
                         break;
                     case "punc":
                         if (
@@ -276,10 +272,9 @@ class Compiler {
                                                 break;
                                             }
                                         }
-                                    }
-                                    else {
+                                    } /*else {
                                         throw new Error(`Compile time error: Unexpected punctuation at line ${token.line}: "${token.value}"`);
-                                    }
+                                    }*/
                                     count += 3;
                                 }
                                 // Opening tag
@@ -300,18 +295,17 @@ class Compiler {
                                 currentEl.stage = "body";
                                 currentEl.strictlySingular = true;
                                 count += 1;
-                            }
-                            else {
+                            } /*else {
                                 throw new Error(`Compile time error: Unexpected punctuation at line ${token.line}: "${token.value}"`);
-                            }
+                            }*/
                         }
                         // End naming/attribute collecting and switch to collecting children
                         if (token.value === ">" && typeof currentEl !== "string") {
                             currentEl.stage = "body";
                         }
                         break;
-                    default:
-                        throw new Error(`Compile time error: Unexpected error at line ${token.line}: "${token.value}"`);
+                    /*default:
+                        throw new Error(`Compile time error: Unexpected error at line ${token.line}: "${token.value}"`);*/
                 }
             }
         }

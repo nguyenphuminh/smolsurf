@@ -29,7 +29,7 @@ export class CLI {
                         terminal: true
                     });
 
-                    input.question("Enter URL: ", async (url) => {
+                    input.question("Search: ", async (url) => {
                         resolve(url);
                         input.close();
                     })
@@ -91,6 +91,8 @@ export class CLI {
 
             try {
                 new URL(finalUrl);
+
+                if (!finalUrl.includes(".")) throw new Error();
             } catch (e) {
                 finalUrl = "https://www.mojeek.com/search?q=" + encodeURIComponent(url);
             }
