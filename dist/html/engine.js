@@ -352,29 +352,54 @@ class Compiler {
                 final.textStream = "";
                 break;
             case "p":
+                final.textStream = `\n\n${final.textStream}\n\n`;
+                break;
             case "h1":
             case "h2":
             case "h3":
             case "h4":
             case "h5":
             case "h6":
-                final.textStream = `\n\n${final.textStream}\n\n`;
+                final.textStream = `\n\n\x1b[1m${final.textStream}\x1b[0m\n\n`;
                 break;
             case "br":
             case "hr":
                 final.textStream = "\n";
                 break;
             case "div":
+            case "section":
+            case "article":
                 final.textStream = `\n${final.textStream}\n`;
                 break;
             case "li":
                 final.textStream = `- ${final.textStream}${final.textStream !== "" ? "\n" : ""}`;
                 break;
-            case "template":
-                final.textStream = "";
-                break;
             case "img":
                 final.textStream = typeof el.attributes.alt === "string" ? el.attributes.alt : final.textStream;
+                break;
+            case "b":
+            case "strong":
+                final.textStream = `\x1b[1m${final.textStream}\x1b[0m`;
+                break;
+            case "i":
+            case "cite":
+                final.textStream = `\x1b[3m${final.textStream}\x1b[0m`;
+                break;
+            case "u":
+                final.textStream = `\x1b[4m${final.textStream}\x1b[0m`;
+                break;
+            case "strike":
+                final.textStream = `\x1b[9m${final.textStream}\x1b[0m`;
+                break;
+            case "q":
+                final.textStream = `\u201C${final.textStream}\u201D`;
+                break;
+            case "mark":
+                final.textStream = `\x1b[7m${final.textStream}\x1b[27m`;
+                break;
+            // Tags that can not be rendered
+            case "template":
+                final.textStream = "";
                 break;
         }
         return final;
