@@ -4,7 +4,8 @@
   "description": "Smolsurf is a text-based web browser",
   "main": "index.js",
   "scripts": {
-    "build": "npx tsc & pkg index.js --targets node18-win-x64,node18-linux-x64,node18-macos-x64 -o smolsurf"
+    "build": "npx tsc & pkg index.js --targets node18-win-x64,node18-linux-x64,node18-macos-x64 -o smolsurf",
+    "set-win-icon": "npx resedit --in \"smolsurf-win.exe\" --out \"smolsurf.exe\" --icon \"1,assets/icon.ico\" & del /q smolsurf-win.exe"
   },
   "repository": {
     "type": "git",
@@ -26,6 +27,7 @@
   "devDependencies": {
     "@types/node": "^22.13.1",
     "pkg": "^5.8.1",
+    "resedit-cli": "^2.0.1",
     "typescript": "^5.7.3"
   }
 }
