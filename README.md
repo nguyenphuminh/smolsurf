@@ -41,6 +41,14 @@ But of course you can just do this to run directly in Node.js:
 node .
 ```
 
+You can also change the icon of the Windows executable using:
+```
+npm run set-win-icon
+```
+
+The icon file is available in `./assets`.
+
+
 ## Short-term todos
 
 * Support more HTML tags.
