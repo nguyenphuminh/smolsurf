@@ -16,9 +16,12 @@ class CLI {
     }
     async listen() {
         for (;;) {
-            console.log("\x1b[H\x1b[2J\x1b[3J"); // Clears screen and scrollback
-            process.stdout.write("\x1bc"); // Resets terminal
+            // Init page data
+            let pageNum = 0;
+            // Init screen
+            this.clearScreen();
             process.title = "smolsurf";
+            // Waiting for URL
             if (!this.url) {
                 this.url = await new Promise((resolve) => {
                     const input = readline_1.default.createInterface({
@@ -32,36 +35,105 @@ class CLI {
                     });
                 });
             }
+            // Site load result
+            let result, pages = [];
             try {
-                const result = await this.load(this.url);
+                result = await this.load(this.url);
+                // Clear the search bar
+                this.clearScreen();
+                // Set console's title to site's title
                 if (result.options.title !== "") {
                     process.title = "smolsurf: " + result.options.title;
                 }
                 else {
                     process.title = "smolsurf: " + this.url;
                 }
-                console.log(result.textStream);
+                // Divide the site's content into multiple pages
+                pages = this.getPages(result.textStream);
+                // Render the first page
+                this.render(pages, pageNum);
             }
             catch (e) {
+                this.url = "";
                 console.log("Unexpected error.");
+                continue;
             }
             this.url = "";
-            // Pause and wait for key presses to exit site and search another
+            // Recalculate pages size when console resize
+            process.stdout.on("resize", () => {
+                pages = this.getPages(result.textStream);
+                // Smaller windows can have more pages, so a page might not exist in bigger windows
+                if (pageNum >= pages.length) {
+                    pageNum = pages.length - 1;
+                }
+                this.clearScreen();
+                this.render(pages, pageNum);
+            });
+            // Pause and wait for key presses
             await new Promise((resolve) => {
-                const input = readline_1.default.createInterface({
-                    input: process.stdin,
-                    output: process.stdout
-                });
-                console.log("\nPress any key to continue...");
                 process.stdin.setRawMode(true);
                 process.stdin.resume();
-                process.stdin.once("data", () => {
-                    process.stdin.setRawMode(false);
-                    input.close();
-                    resolve();
+                process.stdin.on("data", (data) => {
+                    const key = data.toString();
+                    // Exit
+                    if (key === "\x03") { // Ctrl + C
+                        process.exit();
+                    }
+                    // Exit to menu
+                    else if (key === "\r" || key === "\n") {
+                        process.stdin.setRawMode(false);
+                        resolve();
+                    }
+                    // Scroll up/move cursor up
+                    else if (key === "\x1B[A" && pageNum > 0) {
+                        pageNum--;
+                        this.clearScreen();
+                        this.render(pages, pageNum);
+                    }
+                    // Scroll down/move cursor down
+                    else if (key === "\x1B[B" && pageNum < pages.length - 1) {
+                        pageNum++;
+                        this.clearScreen();
+                        this.render(pages, pageNum);
+                    }
                 });
             });
         }
+    }
+    getPages(text) {
+        // Get console size
+        const width = process.stdout.columns || 80;
+        const height = (process.stdout.rows || 24) - 3; // 3 lines for guide and cursor
+        const pages = [[]];
+        const originalLines = text.split("\n");
+        for (const line of originalLines) {
+            if (line === "") { // Empty lines
+                if (pages[pages.length - 1].length >= height) {
+                    pages.push([]);
+                }
+                pages[pages.length - 1].push("");
+            }
+            else {
+                for (let i = 0; i < line.length; i += width) {
+                    if (pages[pages.length - 1].length >= height) {
+                        pages.push([]);
+                    }
+                    pages[pages.length - 1].push(line.slice(i, i + width));
+                }
+            }
+        }
+        while (pages[pages.length - 1].length < height) {
+            pages[pages.length - 1].push("");
+        }
+        return pages;
+    }
+    render(pages, pageNum) {
+        console.log((pages[pageNum] || []).join("\n"));
+        console.log("\n[Enter] to exit, [Arrow Keys] to scroll");
+    }
+    clearScreen() {
+        console.log("\x1b[H\x1b[2J\x1b[3J"); // Clears screen and scrollback
+        process.stdout.write("\x1bc"); // Resets terminal
     }
     async load(url) {
         let code = "";

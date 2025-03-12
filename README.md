@@ -1,4 +1,4 @@
-## What is Smolsurf?
+![](./assets//icon-thin.png)
 
 Smolsurf is a text-based web browser, which means it only renders web pages as text and can be run from the command line. Currently it's just a toy project for me to mess around with, and I might make several breaking changes in the future.
 
