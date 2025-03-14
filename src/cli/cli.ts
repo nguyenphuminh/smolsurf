@@ -2,6 +2,8 @@ import { Compiler, Result } from "../html/engine";
 import readline from "readline";
 import { existsSync, readFileSync } from "fs";
 
+export type line = string[];
+
 export interface CLIOptions {
     cargs: string[];
 }
@@ -94,6 +96,7 @@ export class CLI {
                     // Exit to menu
                     else if (key === "\r" || key === "\n") {
                         process.stdin.setRawMode(false);
+                        process.stdout.removeAllListeners();
                         resolve();
                     }
                     // Scroll up/move cursor up
@@ -108,6 +111,13 @@ export class CLI {
                         this.clearScreen();
                         this.render(pages, pageNum);
                     }
+                    // Show links of the previous site
+                    else if (key === "\t") {
+                        this.clearScreen();
+                        pages = this.getPages(result.options.attachments);
+                        pageNum = 0;
+                        this.render(pages, pageNum);
+                    }
                 });
             });
         }
@@ -119,10 +129,12 @@ export class CLI {
         const height = (process.stdout.rows || 24) - 3; // 3 lines for guide and cursor
 
         const pages: string[][] = [[]];
-        const originalLines = text.split("\n");
+        // The map is used to convert a line string into an array of characters, where ANSI escape codes
+        // (which are really strings made up of multiple characters) are counted as singular characters
+        const originalLines: line[] = text.split("\n").map(line => this.strToLine(line));
 
         for (const line of originalLines) {
-            if (line === "") { // Empty lines
+            if (line.length === 0) { // Empty lines
                 if (pages[pages.length - 1].length >= height) {
                     pages.push([]);
                 }
@@ -134,7 +146,26 @@ export class CLI {
                         pages.push([]);
                     }
 
-                    pages[pages.length - 1].push(line.slice(i, i + width));
+                    // Since ANSI escape codes are not visible when displayed, we gather more real chars to fit into that line
+                    let currentLine = line.slice(i, i + width);
+                    let trueLength = currentLine.length;
+                    let displayLength = this.getDisplayLength(currentLine);
+                    let needToFulfill = trueLength - displayLength;
+                    let extraChar = 0;
+                    
+                    for (let k = i + width; k < line.length; k++) {
+                        if (needToFulfill === 0) break;
+
+                        if (!this.isEscape(line[k])) {
+                            needToFulfill--;
+                        }
+
+                        extraChar++;
+                    }
+
+                    pages[pages.length - 1].push(line.slice(i, i + width + extraChar).join(""));
+
+                    i += extraChar;
                 }
             }
         }
@@ -148,7 +179,7 @@ export class CLI {
 
     render(pages: string[][], pageNum: number) {
         console.log((pages[pageNum] || []).join("\n"));
-        console.log("\n[Enter] to exit, [Arrow Keys] to scroll");
+        console.log("\x1b[0m\n[Enter] to exit, [Arrow Keys] to scroll, [Tab] to show links in this site");
     }
 
     clearScreen() {
@@ -156,6 +187,28 @@ export class CLI {
         process.stdout.write("\x1bc"); // Resets terminal
     }
 
+    // A line is just an array of characters, but ANSI escape codes are counted as characters
+    strToLine(str: string) {
+        return str.match(/\x1b\[[0-9;]*m|./g) || [];
+    }
+
+    // ANSI escape codes are not visible, so we do not count them in a line in display
+    getDisplayLength(str: line) {
+        let length = 0;
+
+        for (const char of str) {
+            length += char.replace(/\x1b\[[0-9;]*m/g, "").length;
+        }
+
+        return length;
+    }
+
+    // Check if character is an ANSI escape code
+    isEscape(char: string) {
+        return char.replace(/\x1b\[[0-9;]*m/g, "").length === 0;
+    }
+
+    // Get the content of a site
     async load(url: string): Promise<Result> {
         let code = "";
 

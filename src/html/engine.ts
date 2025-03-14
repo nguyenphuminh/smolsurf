@@ -404,13 +404,20 @@ export class Compiler {
     }
 
     interpret(ast: AST): Result {
-        const final: Result = { textStream: "", options: {} };
+        const final: Result = {
+            textStream: "",
+            options: {
+                attachments: "Here are some links found in the site which you can copy and search:\n\n",
+                title: ""
+            }
+        };
 
         for (const el of ast) {
             const { textStream, options } = this.getContent(el);   
 
             final.textStream += textStream;
-            Object.assign(final.options, options);
+            final.options.title = options.title || final.options.title;
+            final.options.attachments += options.attachments || "";
         }
 
         return final;
@@ -423,14 +430,15 @@ export class Compiler {
                     options: {}
                 };
 
-        const final: Result = { textStream: "", options: {} };
+        const final: Result = { textStream: "", options: { attachments: "" } };
 
         // Get content from children
         for (const childEl of el.children) {
             const { textStream, options } = this.getContent(childEl, [ el.name, ...scope ]);
 
             final.textStream += textStream;
-            Object.assign(final.options, options);
+            final.options.title = options.title || final.options.title;
+            final.options.attachments += options.attachments || "";
         }
 
         switch (el.name.toLowerCase()) {
@@ -523,6 +531,15 @@ export class Compiler {
             
             case "mark":
                 final.textStream = `\x1b[7m${final.textStream}\x1b[27m`;
+
+                break;
+            
+            case "a":
+                if (typeof el.attributes.href === "string") {
+                    final.options.attachments += `\x1b[1;4m${el.attributes.href}\x1b[0m: ${final.textStream}\n`;
+                }
+
+                final.textStream = `\x1b[1;4m${final.textStream}\x1b[0m`;
 
                 break;
 
