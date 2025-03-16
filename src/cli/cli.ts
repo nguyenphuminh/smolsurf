@@ -86,17 +86,23 @@ export class CLI {
             await new Promise<void>((resolve) => {
                 process.stdin.setRawMode(true);
                 process.stdin.resume();
-                process.stdin.on("data", (data) => {
+
+                const keyEventListener = (data: Buffer) => {
                     const key = data.toString();
 
                     // Exit
                     if (key === "\x03") { // Ctrl + C
-                        process.exit();
+                        process.stdin.removeListener("data", keyEventListener);
+                        process.stdin.setRawMode(false);
+                        process.stdin.pause();
+                        process.exit(0);
                     }
                     // Exit to menu
                     else if (key === "\r" || key === "\n") {
+                        process.stdin.removeListener("data", keyEventListener);
                         process.stdin.setRawMode(false);
-                        process.stdout.removeAllListeners();
+                        process.stdin.pause();
+                        process.stdout.removeAllListeners("resize");
                         resolve();
                     }
                     // Scroll up/move cursor up
@@ -118,7 +124,9 @@ export class CLI {
                         pageNum = 0;
                         this.render(pages, pageNum);
                     }
-                });
+                }
+
+                process.stdin.on("data", keyEventListener);
             });
         }
     }
