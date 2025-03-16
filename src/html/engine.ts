@@ -412,18 +412,23 @@ export class Compiler {
             }
         };
 
-        for (const el of ast) {
-            const { textStream, options } = this.getContent(el);   
+        const astNode: TagBody = {
+            name: "AST",
+            attributes: {},
+            children: ast,
+            stage: "body"
+        };
 
-            final.textStream += textStream;
-            final.options.title = options.title || final.options.title;
-            final.options.attachments += options.attachments || "";
-        }
+        const { textStream, options } = this.getContent(astNode);
+
+        final.textStream += textStream;
+        final.options.title = options.title || final.options.title;
+        final.options.attachments += options.attachments || "";
 
         return final;
     }
 
-    getContent(el: TagBody | string, scope: (string | Scope)[] = []): Result {
+    getContent(el: TagBody | string): Result {
         if (typeof el === "string")
             return {
                     textStream: this.sanitize(el),
@@ -432,122 +437,182 @@ export class Compiler {
 
         const final: Result = { textStream: "", options: { attachments: "" } };
 
-        // Get content from children
-        for (const childEl of el.children) {
-            const { textStream, options } = this.getContent(childEl, [ el.name, ...scope ]);
+        let suffix = "";
 
-            final.textStream += textStream;
+        // Get content from children
+        for (let index = 0; index < el.children.length; index++) {
+            const childEl = el.children[index];
+
+            // If children is just text
+            if (typeof childEl === "string") {
+                final.textStream += suffix + this.sanitize(childEl);
+                suffix = "";
+                continue;
+            }
+
+            // If children is an html element
+            const { textStream, options } = this.getContent(childEl);
+
             final.options.title = options.title || final.options.title;
             final.options.attachments += options.attachments || "";
-        }
 
-        switch (el.name.toLowerCase()) {
-            case "html":
-                // html tag should have no parents
-                if (scope.length !== 0) {
-                    final.textStream = "";
-                }
+            switch (childEl.name.toLowerCase()) {    
+                case "title":
+                    final.options.title = textStream;
 
-                break;
+                    break;
+                
+                case "p":
+                    {
+                        const prefix = this.getPrefix("\n\n", suffix, index);
+                        final.textStream += `${prefix}${textStream}`;
+                        suffix = "\n\n";
+                    }
 
-            case "body":
-                // body tag should only have html as parent
-                if (scope.length !== 1 || scope[0] !== "html") {
-                    final.textStream = "";
-                }
+                    break;
+    
+                case "h1":
+                case "h2":
+                case "h3":
+                case "h4":
+                case "h5":
+                case "h6":
+                    {
+                        const prefix = this.getPrefix("\n\n", suffix, index);
+                        final.textStream += `${prefix}\x1b[1m${textStream}\x1b[0m`;
+                        suffix = "\n\n";
+                    }
 
-                break;
+                    break;
+                
+                case "br":
+                case "hr":
+                    {
+                        const prefix = this.getPrefix("", suffix, index);
+                        final.textStream += `${prefix}\n`;
+                        suffix = "";
+                    }
+    
+                    break;
+                
+                case "div":
+                case "section":
+                case "article":
+                    {
+                        const prefix = this.getPrefix("\n", suffix, index);
+                        final.textStream += `${prefix}${textStream}`;
+                        suffix = "\n";
+                    }
+    
+                    break;
+                
+                case "li":
+                    {
+                        const prefix = this.getPrefix("\n", suffix, index);
+                        final.textStream += `${prefix}- ${textStream}`;
+                        suffix = textStream !== "" ? "\n" : "";
+                    }         
+    
+                    break;
+                
+                case "img":
+                    {
+                        const prefix = this.getPrefix("", suffix, index);
+                        final.textStream += prefix + (typeof childEl.attributes.alt === "string" ? childEl.attributes.alt : textStream);
+                        suffix = "";
+                    }
+    
+                    break;
+                
+                case "b":
+                case "strong":
+                    {
+                        const prefix = this.getPrefix("", suffix, index);
+                        final.textStream += `${prefix}\x1b[1m${textStream}\x1b[0m`;
+                        suffix = "";
+                    }
+    
+                    break;
+                
+                case "i":
+                case "cite":
+                    {
+                        const prefix = this.getPrefix("", suffix, index);
+                        final.textStream += `${prefix}\x1b[3m${textStream}\x1b[0m`;
+                        suffix = "";
+                    }
+    
+                    break;
+    
+                case "u":
+                    {
+                        const prefix = this.getPrefix("", suffix, index);
+                        final.textStream += `${prefix}\x1b[4m${textStream}\x1b[0m`;
+                        suffix = "";
+                    }
+    
+                    break;
+                
+                case "strike":
+                    {
+                        const prefix = this.getPrefix("", suffix, index);
+                        final.textStream += `${prefix}\x1b[9m${textStream}\x1b[0m`;
+                        suffix = "";
+                    }
+    
+                    break;
+    
+                case "q":
+                    {
+                        const prefix = this.getPrefix("", suffix, index);
+                        final.textStream += `${prefix}\u201C${textStream}\u201D`;
+                        suffix = "";
+                    }
+    
+                    break;
+                
+                case "mark":
+                    {
+                        const prefix = this.getPrefix("", suffix, index);
+                        final.textStream += `${prefix}\x1b[7m${textStream}\x1b[27m`;
+                        suffix = "";
+                    }
+    
+                    break;
+                
+                case "a":
+                    {
+                        if (typeof childEl.attributes.href === "string") {
+                            final.options.attachments += `\x1b[1;4m${childEl.attributes.href}\x1b[0m: ${textStream}\n`;
+                        }
+        
+                        const prefix = this.getPrefix("", suffix, index);
+                        final.textStream += `${prefix}\x1b[1;4m${textStream}\x1b[0m`;
+                        suffix = "";
+                    }
+    
+                    break;
 
-            case "title":
-                final.options.title = final.textStream;
-                final.textStream = "";
+                case "span":
+                    {
+                        final.textStream += textStream;
+                        suffix = "";
+                    }
 
-                break;
-            
-            case "p":
-                final.textStream = `\n\n${final.textStream}\n\n`;
-
-                break;
-
-            case "h1":
-            case "h2":
-            case "h3":
-            case "h4":
-            case "h5":
-            case "h6":
-                final.textStream = `\n\n\x1b[1m${final.textStream}\x1b[0m\n\n`;
-     
-                break;
-            
-            case "br":
-            case "hr":
-                final.textStream = "\n";
-
-                break;
-            
-            case "div":
-            case "section":
-            case "article":
-                final.textStream = `\n${final.textStream}\n`;
-
-                break;
-            
-            case "li":
-                final.textStream = `- ${final.textStream}${final.textStream !== "" ? "\n" : ""}`;
-
-                break;
-            
-            case "img":
-                final.textStream = typeof el.attributes.alt === "string" ? el.attributes.alt : final.textStream;
-
-                break;
-            
-            case "b":
-            case "strong":
-                final.textStream = `\x1b[1m${final.textStream}\x1b[0m`;
-
-                break;
-            
-            case "i":
-            case "cite":
-                final.textStream = `\x1b[3m${final.textStream}\x1b[0m`;
-
-                break;
-
-            case "u":
-                final.textStream = `\x1b[4m${final.textStream}\x1b[0m`;
-
-                break;
-            
-            case "strike":
-                final.textStream = `\x1b[9m${final.textStream}\x1b[0m`;
-
-                break;
-
-            case "q":
-                final.textStream = `\u201C${final.textStream}\u201D`;
-
-                break;
-            
-            case "mark":
-                final.textStream = `\x1b[7m${final.textStream}\x1b[27m`;
-
-                break;
-            
-            case "a":
-                if (typeof el.attributes.href === "string") {
-                    final.options.attachments += `\x1b[1;4m${el.attributes.href}\x1b[0m: ${final.textStream}\n`;
-                }
-
-                final.textStream = `\x1b[1;4m${final.textStream}\x1b[0m`;
-
-                break;
-
-            // Tags that can not be rendered
-            case "template":
-                final.textStream = "";
-
-                break;
+                    break;
+    
+                // Tags that can not be rendered
+                case "template":
+                    break;
+                
+                // Unknown tags are treated as text
+                default:
+                    {
+                        const prefix = this.getPrefix("", suffix, index);
+                        final.textStream += prefix + textStream;
+                        suffix = "";
+                    }
+            }
         }
 
         return final;
@@ -561,5 +626,11 @@ export class Compiler {
             .replace(/\s+/g, " ")
             .trim()
         );
+    }
+
+    getPrefix(prefix: string, suffix: string, index: number): string {
+        if (index === 0) return "";
+
+        return prefix.length > suffix.length ? prefix : suffix;
     }
 }
