@@ -333,11 +333,6 @@ class Compiler {
         return final;
     }
     getContent(el) {
-        if (typeof el === "string")
-            return {
-                textStream: this.sanitize(el),
-                options: {}
-            };
         const final = { textStream: "", options: { attachments: "" } };
         let suffix = "";
         // Get content from children
@@ -345,7 +340,7 @@ class Compiler {
             const childEl = el.children[index];
             // If children is just text
             if (typeof childEl === "string") {
-                final.textStream += suffix + this.sanitize(childEl);
+                final.textStream += suffix + this.sanitize(childEl, index === 0 || suffix !== "", index === el.children.length - 1);
                 suffix = "";
                 continue;
             }
@@ -481,12 +476,21 @@ class Compiler {
         }
         return final;
     }
-    sanitize(text) {
-        return (0, encoding_1.decodeHtmlEntities)(text
-            .replaceAll("\n", "")
-            .replaceAll("\t", "")
-            .replace(/\s+/g, " ")
-            .trim());
+    sanitize(text, trimStart, trimEnd) {
+        let processedText = text
+            .replaceAll("\r", "")
+            .replaceAll("\n", " ")
+            .replaceAll("\t", " ")
+            .replace(/\s+/g, " ");
+        let trimmedText = processedText.trim();
+        if (trimmedText.length === 0) {
+            processedText = trimmedText;
+        }
+        else {
+            processedText = trimStart ? processedText.trimStart() : processedText;
+            processedText = trimEnd ? processedText.trimEnd() : processedText;
+        }
+        return (0, encoding_1.decodeHtmlEntities)(processedText);
     }
     getPrefix(prefix, suffix, index) {
         if (index === 0)

@@ -428,13 +428,7 @@ export class Compiler {
         return final;
     }
 
-    getContent(el: TagBody | string): Result {
-        if (typeof el === "string")
-            return {
-                    textStream: this.sanitize(el),
-                    options: {}
-                };
-
+    getContent(el: TagBody): Result {
         const final: Result = { textStream: "", options: { attachments: "" } };
 
         let suffix = "";
@@ -445,7 +439,7 @@ export class Compiler {
 
             // If children is just text
             if (typeof childEl === "string") {
-                final.textStream += suffix + this.sanitize(childEl);
+                final.textStream += suffix + this.sanitize(childEl, index === 0 || suffix !== "", index === el.children.length-1);
                 suffix = "";
                 continue;
             }
@@ -618,14 +612,23 @@ export class Compiler {
         return final;
     }
 
-    sanitize(text: string): string {
-        return decodeHtmlEntities(
-            text
-            .replaceAll("\n", "")
-            .replaceAll("\t", "")
-            .replace(/\s+/g, " ")
-            .trim()
-        );
+    sanitize(text: string, trimStart: boolean, trimEnd: boolean): string {
+        let processedText = text
+            .replaceAll("\r", "")
+            .replaceAll("\n", " ")
+            .replaceAll("\t", " ")
+            .replace(/\s+/g, " ");
+
+        let trimmedText = processedText.trim();
+
+        if (trimmedText.length === 0) {
+            processedText = trimmedText;
+        } else {
+            processedText = trimStart ? processedText.trimStart() : processedText;
+            processedText = trimEnd ? processedText.trimEnd() : processedText;   
+        }
+
+        return decodeHtmlEntities(processedText);
     }
 
     getPrefix(prefix: string, suffix: string, index: number): string {
