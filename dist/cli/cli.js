@@ -159,12 +159,11 @@ class CLI {
         return pages;
     }
     render(pages, pageNum) {
-        console.log((pages[pageNum] || []).join("\n"));
-        console.log("\x1b[0m\n[Enter] to exit, [Arrow Keys] to scroll, [Tab] to show links in this site");
+        console.log((pages[pageNum] || []).join("\n") +
+            "\x1b[0m\n\n[Enter] to exit, [Arrow Keys] to scroll, [Tab] to show links in this site");
     }
     clearScreen() {
-        console.log("\x1b[H\x1b[2J\x1b[3J"); // Clears screen and scrollback
-        process.stdout.write("\x1bc"); // Resets terminal
+        process.stdout.write("\x1b[H\x1b[2J\x1b[3J\x1bc"); // Resets terminal
     }
     // A line is just an array of characters, but ANSI escape codes are counted as characters
     strToLine(str) {

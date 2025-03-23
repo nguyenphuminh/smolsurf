@@ -1,10 +1,8 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.Compiler = exports.NUMERALS = void 0;
+exports.Compiler = void 0;
 // import { writeFileSync } from "fs";
 const encoding_1 = require("./encoding");
-// export const IDEN_CHARACTERS = "0123456789abcdefghijklmnopqrstuvwxyz-_.:%";
-exports.NUMERALS = "0123456789";
 class Compiler {
     tokenize(input) {
         // Blud I'm too lazy to implement proper SGML for now
@@ -126,13 +124,15 @@ class Compiler {
                     // A valid unquoted attribute value in HTML is any string of text that is not 
                     // the empty string and that doesn’t contain spaces, tabs, line feeds, form 
                     // feeds, carriage returns, ", ', `, =, <, or >.
-                    if (!(/[ \t\n\f\r"'`=<>]/.test(char)) /*IDEN_CHARACTERS.includes(char.toLowerCase())*/) {
+                    if (!(/[ \t\n\f\r"'=<>]/.test(char)) /*IDEN_CHARACTERS.includes(char.toLowerCase())*/) {
                         temp += char;
                         // Check if next character is a whitespace, new line, or punctuations
                         // If not, we will stop recording this identifier immediately
                         if (nextChar === " " ||
-                            nextChar === "\n" ||
                             nextChar === "\t" ||
+                            nextChar === "\n" ||
+                            nextChar === "\f" ||
+                            nextChar === "\r" ||
                             nextChar === ">" ||
                             nextChar === "<" ||
                             nextChar === "/" ||
@@ -150,6 +150,15 @@ class Compiler {
                     }
             }
             column++;
+        }
+        // Handle the case where there still might be text left
+        if (isText) {
+            tokens.push({
+                type: "text",
+                value: temp,
+                line: currentLine,
+                col: column
+            });
         }
         // writeFileSync("./tokens.json", JSON.stringify(tokens));
         return tokens;
@@ -276,6 +285,9 @@ class Compiler {
                                         throw new Error(`Compile time error: Unexpected punctuation at line ${token.line}: "${token.value}"`);
                                     }*/
                                     count += 3;
+                                    // Push tag to AST if it is the only body left
+                                    if (bodies.length === 1)
+                                        ast.push(bodies.pop());
                                 }
                                 // Opening tag
                                 else {
@@ -295,6 +307,9 @@ class Compiler {
                                 currentEl.stage = "body";
                                 currentEl.strictlySingular = true;
                                 count += 1;
+                                // Push tag to AST if it is the only body left
+                                if (bodies.length === 1)
+                                    ast.push(bodies.pop());
                             } /*else {
                                 throw new Error(`Compile time error: Unexpected punctuation at line ${token.line}: "${token.value}"`);
                             }*/
@@ -479,6 +494,7 @@ class Compiler {
     sanitize(text, trimStart, trimEnd) {
         let processedText = text
             .replaceAll("\r", "")
+            .replaceAll("\f", "")
             .replaceAll("\n", " ")
             .replaceAll("\t", " ")
             .replace(/\s+/g, " ");
