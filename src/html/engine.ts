@@ -31,7 +31,7 @@ export class Compiler {
         input = input.replace(/<!DOCTYPE\s+html.*?>/gi, "");
         // Blud I'm too lazy to parse JS and CSS for now
         input = input.replace(/<script[^>]*?>[\s\S]*?<\/script\s*>/gi, "")
-                     .replace(/<style[^>]*?>[\s\S]*?<\/style\s*>/gi, "");
+            .replace(/<style[^>]*?>[\s\S]*?<\/style\s*>/gi, "");
 
         // writeFileSync("./for-testing.html", input);
 
@@ -51,9 +51,9 @@ export class Compiler {
         let column = 1;
 
         for (let pointer = 0; pointer < input.length; pointer++) {
-            const prevChar = input[pointer-1];
+            const prevChar = input[pointer - 1];
             const char = input[pointer];
-            const nextChar = input[pointer+1];
+            const nextChar = input[pointer + 1];
 
             // New line
             if (char === "\n") {
@@ -64,10 +64,10 @@ export class Compiler {
 
             // Handle comments
             if (isComment) {
-                if (input.slice(pointer, pointer+3) === "-->") { 
+                if (input.slice(pointer, pointer + 3) === "-->") {
                     isComment = false;
 
-                    pointer = pointer+2;
+                    pointer = pointer + 2;
                 }
 
                 continue;
@@ -128,9 +128,9 @@ export class Compiler {
                 case "=":
                     {
                         // Comments
-                        if (input.slice(pointer, pointer+4) === "<!--") {
+                        if (input.slice(pointer, pointer + 4) === "<!--") {
                             isComment = true;
-                            pointer = pointer+3;
+                            pointer = pointer + 3;
                         }
                         // Punctuations
                         else {
@@ -170,14 +170,14 @@ export class Compiler {
                         // Check if next character is a whitespace, new line, or punctuations
                         // If not, we will stop recording this identifier immediately
                         if (
-                            nextChar === " "  ||
+                            nextChar === " " ||
                             nextChar === "\t" ||
                             nextChar === "\n" ||
                             nextChar === "\f" ||
                             nextChar === "\r" ||
-                            nextChar === ">"  ||
-                            nextChar === "<"  ||
-                            nextChar === "/"  ||
+                            nextChar === ">" ||
+                            nextChar === "<" ||
+                            nextChar === "/" ||
                             nextChar === "="
                         ) {
                             // Push token
@@ -218,7 +218,7 @@ export class Compiler {
 
         for (let count = 0; count < tokens.length; count++) {
             const token = tokens[count];
-            
+
             if (bodies.length === 0) {
                 switch (token.type) {
                     case "identifier":
@@ -248,9 +248,9 @@ export class Compiler {
                         throw new Error(`Compile time error: Unexpected token at line ${token.line}: "${token.value}"`);*/
                 }
             } else {
-                const currentEl = bodies[bodies.length-1];
+                const currentEl = bodies[bodies.length - 1];
 
-                switch(token.type) {
+                switch (token.type) {
                     case "identifier":
                         // Identifier for name assignment
                         if (typeof currentEl !== "string" && currentEl.stage === "name" && currentEl.name === "") {
@@ -260,8 +260,8 @@ export class Compiler {
                         }
                         // Identifier for attribute assignment
                         else if (typeof currentEl !== "string" && currentEl.stage === "attr") {
-                            const supposedEqual = tokens[count+1];
-                            const supposedValue = tokens[count+2];
+                            const supposedEqual = tokens[count + 1];
+                            const supposedValue = tokens[count + 2];
 
                             // Attributes with values
                             if (
@@ -271,13 +271,13 @@ export class Compiler {
                             ) {
                                 currentEl.attributes[token.value] = supposedValue.value;
 
-                                count+=2;
+                                count += 2;
                             }
                             // Boolean attributes
                             else {
                                 currentEl.attributes[token.value] = true;
                             }
-                        // Some how the token list have an identifier in the body
+                            // Some how the token list have an identifier in the body
                         } else if (
                             // Current el is at body state means it had a closing >
                             (typeof currentEl !== "string" && currentEl.stage === "body") ||
@@ -290,7 +290,7 @@ export class Compiler {
                         }*/
 
                         break;
-                    
+
                     case "string":
                         // Some how the token list have a string in the body
                         if (// Current el is at body state means it had a closing >
@@ -328,10 +328,10 @@ export class Compiler {
                             typeof currentEl === "string"
                         ) {
                             if (token.value === "<") {
-                                const supposedClosing = tokens[count+1];
-                                const supposedTag = tokens[count+2];
-                                const supposedEnd = tokens[count+3];
-                                
+                                const supposedClosing = tokens[count + 1];
+                                const supposedTag = tokens[count + 2];
+                                const supposedEnd = tokens[count + 3];
+
                                 // Closing tag
                                 if (
                                     supposedClosing?.type === "punc" &&
@@ -344,16 +344,16 @@ export class Compiler {
                                         supposedEnd?.value === ">"
                                     ) {
                                         // Check if it is the correct closing tag, only then will we push to parent
-                                        for (let index = bodies.length-1; index >= 0; index--) {
+                                        for (let index = bodies.length - 1; index >= 0; index--) {
                                             const el = bodies[index];
-    
+
                                             if (
                                                 typeof el !== "string" &&
                                                 !el.strictlySingular &&
                                                 supposedTag.value === el.name
                                             ) {
-                                                el.children.push(...bodies.slice(index+1, bodies.length));
-                                                bodies.splice(index+1, bodies.length);
+                                                el.children.push(...bodies.slice(index + 1, bodies.length));
+                                                bodies.splice(index + 1, bodies.length);
 
                                                 break;
                                             }
@@ -361,8 +361,8 @@ export class Compiler {
                                     } /*else {
                                         throw new Error(`Compile time error: Unexpected punctuation at line ${token.line}: "${token.value}"`);
                                     }*/
-    
-                                    count+=3;
+
+                                    count += 3;
 
                                     // Push tag to AST if it is the only body left
                                     if (bodies.length === 1) ast.push(bodies.pop() as TagBody);
@@ -375,18 +375,18 @@ export class Compiler {
                                         children: [],
                                         stage: "name"
                                     });
-                                } 
-                            } 
+                                }
+                            }
                         }
 
                         // Singular tags
                         if (token.value === "/" && typeof currentEl !== "string" && currentEl.stage !== "body") {
-                            const supposedEnd = tokens[count+1];
+                            const supposedEnd = tokens[count + 1];
 
                             if (supposedEnd?.type === "punc" && supposedEnd?.value === ">") {
                                 currentEl.stage = "body";
                                 currentEl.strictlySingular = true;
-                                count+=1;
+                                count += 1;
 
                                 // Push tag to AST if it is the only body left
                                 if (bodies.length === 1) ast.push(bodies.pop() as TagBody);
@@ -447,9 +447,20 @@ export class Compiler {
         for (let index = 0; index < el.children.length; index++) {
             const childEl = el.children[index];
 
+            const noANSIStream = this.removeANSICode(final.textStream);
+            const lastWrittenChar = noANSIStream[noANSIStream.length-1];
+
             // If children is just text
             if (typeof childEl === "string") {
-                final.textStream += suffix + this.sanitize(childEl, index === 0 || suffix !== "", index === el.children.length-1);
+                const trimStart = index === 0 || suffix !== "" || /\n| /.test(lastWrittenChar) || final.textStream.length === 0;
+                const trimEnd = index === el.children.length - 1;
+
+                final.textStream += suffix + this.sanitize(
+                    childEl,
+                    trimStart,
+                    trimEnd
+                );
+
                 suffix = "";
                 continue;
             }
@@ -460,12 +471,12 @@ export class Compiler {
             final.options.title = options.title || final.options.title;
             final.options.attachments += options.attachments || "";
 
-            switch (childEl.name.toLowerCase()) {    
+            switch (childEl.name.toLowerCase()) {
                 case "title":
                     final.options.title = textStream;
 
                     break;
-                
+
                 case "p":
                     {
                         const prefix = this.getPrefix("\n\n", suffix, index);
@@ -474,7 +485,7 @@ export class Compiler {
                     }
 
                     break;
-    
+
                 case "h1":
                 case "h2":
                 case "h3":
@@ -483,12 +494,19 @@ export class Compiler {
                 case "h6":
                     {
                         const prefix = this.getPrefix("\n\n", suffix, index);
-                        final.textStream += `${prefix}\x1b[1m${textStream}\x1b[0m`;
+
+                        final.textStream += prefix;
+
+                        // This condition is to reduce redundant ANSI escape codes
+                        if (textStream !== "") {
+                            final.textStream += `\x1b[1m${textStream}\x1b[0m`;
+                        }
+
                         suffix = "\n\n";
                     }
 
                     break;
-                
+
                 case "br":
                 case "hr":
                     {
@@ -496,9 +514,9 @@ export class Compiler {
                         final.textStream += `${prefix}\n`;
                         suffix = "";
                     }
-    
+
                     break;
-                
+
                 case "div":
                 case "section":
                 case "article":
@@ -507,108 +525,136 @@ export class Compiler {
                         final.textStream += `${prefix}${textStream}`;
                         suffix = "\n";
                     }
-    
+
                     break;
-                
+
                 case "li":
                     {
                         const prefix = this.getPrefix("\n", suffix, index);
                         final.textStream += `${prefix}- ${textStream}`;
                         suffix = textStream !== "" ? "\n" : "";
-                    }         
-    
+                    }
+
                     break;
-                
+
                 case "img":
                     {
                         const prefix = this.getPrefix("", suffix, index);
                         final.textStream += prefix + (typeof childEl.attributes.alt === "string" ? childEl.attributes.alt : textStream);
                         suffix = "";
                     }
-    
+
                     break;
-                
+
                 case "b":
                 case "strong":
                     {
                         const prefix = this.getPrefix("", suffix, index);
-                        final.textStream += `${prefix}\x1b[1m${textStream}\x1b[0m`;
+
+                        final.textStream += prefix;
+
+                        if (textStream !== "") {
+                            final.textStream += `\x1b[1m${textStream}\x1b[0m`;
+                        }
+
                         suffix = "";
                     }
-    
+
                     break;
-                
+
                 case "i":
                 case "cite":
                     {
                         const prefix = this.getPrefix("", suffix, index);
-                        final.textStream += `${prefix}\x1b[3m${textStream}\x1b[0m`;
+
+                        final.textStream += prefix;
+
+                        if (textStream !== "") {
+                            final.textStream += `\x1b[3m${textStream}\x1b[0m`;
+                        }
+
                         suffix = "";
                     }
-    
+
                     break;
-    
+
                 case "u":
                     {
                         const prefix = this.getPrefix("", suffix, index);
-                        final.textStream += `${prefix}\x1b[4m${textStream}\x1b[0m`;
+
+                        final.textStream += prefix;
+
+                        if (textStream !== "") {
+                            final.textStream += `\x1b[4m${textStream}\x1b[0m`;
+                        }
+
                         suffix = "";
                     }
-    
+
                     break;
-                
+
                 case "strike":
                     {
                         const prefix = this.getPrefix("", suffix, index);
-                        final.textStream += `${prefix}\x1b[9m${textStream}\x1b[0m`;
+
+                        final.textStream += prefix;
+
+                        if (textStream !== "") {
+                            final.textStream += `\x1b[9m${textStream}\x1b[0m`;
+                        }
+
                         suffix = "";
                     }
-    
+
                     break;
-    
+
                 case "q":
                     {
                         const prefix = this.getPrefix("", suffix, index);
                         final.textStream += `${prefix}\u201C${textStream}\u201D`;
                         suffix = "";
                     }
-    
+
                     break;
-                
+
                 case "mark":
                     {
                         const prefix = this.getPrefix("", suffix, index);
-                        final.textStream += `${prefix}\x1b[7m${textStream}\x1b[27m`;
+
+                        final.textStream += prefix;
+
+                        if (textStream !== "") {
+                            final.textStream += `\x1b[7m${textStream}\x1b[27m`;
+                        }
+
                         suffix = "";
                     }
-    
+
                     break;
-                
+
                 case "a":
                     {
                         if (typeof childEl.attributes.href === "string") {
                             final.options.attachments += `\x1b[1;4m${childEl.attributes.href}\x1b[0m: ${textStream}\n`;
                         }
-        
+
                         const prefix = this.getPrefix("", suffix, index);
-                        final.textStream += `${prefix}\x1b[1;4m${textStream}\x1b[0m`;
-                        suffix = "";
-                    }
-    
-                    break;
 
-                case "span":
-                    {
-                        final.textStream += textStream;
+                        final.textStream += prefix;
+
+                        if (textStream !== "") {
+                            final.textStream += `\x1b[1;4m${textStream}\x1b[0m`;
+                        }
+
                         suffix = "";
                     }
 
                     break;
-    
+
                 // Tags that can not be rendered
                 case "template":
                     break;
-                
+
                 // Unknown tags are treated as text
                 default:
                     {
@@ -630,14 +676,8 @@ export class Compiler {
             .replaceAll("\t", " ")
             .replace(/\s+/g, " ");
 
-        let trimmedText = processedText.trim();
-
-        if (trimmedText.length === 0) {
-            processedText = trimmedText;
-        } else {
-            processedText = trimStart ? processedText.trimStart() : processedText;
-            processedText = trimEnd ? processedText.trimEnd() : processedText;   
-        }
+        processedText = trimStart ? processedText.trimStart() : processedText;
+        processedText = trimEnd ? processedText.trimEnd() : processedText;
 
         return decodeHtmlEntities(processedText);
     }
@@ -646,5 +686,9 @@ export class Compiler {
         if (index === 0) return "";
 
         return prefix.length > suffix.length ? prefix : suffix;
+    }
+
+    removeANSICode(text: string): string {
+        return text.replace(/\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])/g, "");
     }
 }

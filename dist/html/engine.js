@@ -353,9 +353,13 @@ class Compiler {
         // Get content from children
         for (let index = 0; index < el.children.length; index++) {
             const childEl = el.children[index];
+            const noANSIStream = this.removeANSICode(final.textStream);
+            const lastWrittenChar = noANSIStream[noANSIStream.length - 1];
             // If children is just text
             if (typeof childEl === "string") {
-                final.textStream += suffix + this.sanitize(childEl, index === 0 || suffix !== "", index === el.children.length - 1);
+                const trimStart = index === 0 || suffix !== "" || /\n| /.test(lastWrittenChar) || final.textStream.length === 0;
+                const trimEnd = index === el.children.length - 1;
+                final.textStream += suffix + this.sanitize(childEl, trimStart, trimEnd);
                 suffix = "";
                 continue;
             }
@@ -382,7 +386,11 @@ class Compiler {
                 case "h6":
                     {
                         const prefix = this.getPrefix("\n\n", suffix, index);
-                        final.textStream += `${prefix}\x1b[1m${textStream}\x1b[0m`;
+                        final.textStream += prefix;
+                        // This condition is to reduce redundant ANSI escape codes
+                        if (textStream !== "") {
+                            final.textStream += `\x1b[1m${textStream}\x1b[0m`;
+                        }
                         suffix = "\n\n";
                     }
                     break;
@@ -421,7 +429,10 @@ class Compiler {
                 case "strong":
                     {
                         const prefix = this.getPrefix("", suffix, index);
-                        final.textStream += `${prefix}\x1b[1m${textStream}\x1b[0m`;
+                        final.textStream += prefix;
+                        if (textStream !== "") {
+                            final.textStream += `\x1b[1m${textStream}\x1b[0m`;
+                        }
                         suffix = "";
                     }
                     break;
@@ -429,21 +440,30 @@ class Compiler {
                 case "cite":
                     {
                         const prefix = this.getPrefix("", suffix, index);
-                        final.textStream += `${prefix}\x1b[3m${textStream}\x1b[0m`;
+                        final.textStream += prefix;
+                        if (textStream !== "") {
+                            final.textStream += `\x1b[3m${textStream}\x1b[0m`;
+                        }
                         suffix = "";
                     }
                     break;
                 case "u":
                     {
                         const prefix = this.getPrefix("", suffix, index);
-                        final.textStream += `${prefix}\x1b[4m${textStream}\x1b[0m`;
+                        final.textStream += prefix;
+                        if (textStream !== "") {
+                            final.textStream += `\x1b[4m${textStream}\x1b[0m`;
+                        }
                         suffix = "";
                     }
                     break;
                 case "strike":
                     {
                         const prefix = this.getPrefix("", suffix, index);
-                        final.textStream += `${prefix}\x1b[9m${textStream}\x1b[0m`;
+                        final.textStream += prefix;
+                        if (textStream !== "") {
+                            final.textStream += `\x1b[9m${textStream}\x1b[0m`;
+                        }
                         suffix = "";
                     }
                     break;
@@ -457,7 +477,10 @@ class Compiler {
                 case "mark":
                     {
                         const prefix = this.getPrefix("", suffix, index);
-                        final.textStream += `${prefix}\x1b[7m${textStream}\x1b[27m`;
+                        final.textStream += prefix;
+                        if (textStream !== "") {
+                            final.textStream += `\x1b[7m${textStream}\x1b[27m`;
+                        }
                         suffix = "";
                     }
                     break;
@@ -467,13 +490,10 @@ class Compiler {
                             final.options.attachments += `\x1b[1;4m${childEl.attributes.href}\x1b[0m: ${textStream}\n`;
                         }
                         const prefix = this.getPrefix("", suffix, index);
-                        final.textStream += `${prefix}\x1b[1;4m${textStream}\x1b[0m`;
-                        suffix = "";
-                    }
-                    break;
-                case "span":
-                    {
-                        final.textStream += textStream;
+                        final.textStream += prefix;
+                        if (textStream !== "") {
+                            final.textStream += `\x1b[1;4m${textStream}\x1b[0m`;
+                        }
                         suffix = "";
                     }
                     break;
@@ -498,20 +518,17 @@ class Compiler {
             .replaceAll("\n", " ")
             .replaceAll("\t", " ")
             .replace(/\s+/g, " ");
-        let trimmedText = processedText.trim();
-        if (trimmedText.length === 0) {
-            processedText = trimmedText;
-        }
-        else {
-            processedText = trimStart ? processedText.trimStart() : processedText;
-            processedText = trimEnd ? processedText.trimEnd() : processedText;
-        }
+        processedText = trimStart ? processedText.trimStart() : processedText;
+        processedText = trimEnd ? processedText.trimEnd() : processedText;
         return (0, encoding_1.decodeHtmlEntities)(processedText);
     }
     getPrefix(prefix, suffix, index) {
         if (index === 0)
             return "";
         return prefix.length > suffix.length ? prefix : suffix;
+    }
+    removeANSICode(text) {
+        return text.replace(/\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])/g, "");
     }
 }
 exports.Compiler = Compiler;
