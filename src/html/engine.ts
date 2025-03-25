@@ -441,6 +441,8 @@ export class Compiler {
     getContent(el: TagBody): Result {
         const final: Result = { textStream: "", options: { attachments: "" } };
 
+        // Utility variables for certain tags
+        let listIndex = 1;
         let suffix = "";
 
         // Get content from children
@@ -531,7 +533,16 @@ export class Compiler {
                 case "li":
                     {
                         const prefix = this.getPrefix("\n", suffix, index);
-                        final.textStream += `${prefix}- ${textStream}`;
+
+                        let listStyle = "•";
+
+                        if (el.name === "ol") {
+                            listStyle = listIndex.toString() + ".";
+                            listIndex++;
+                        }
+
+                        final.textStream += `${prefix}${listStyle} ${textStream}`;
+                        
                         suffix = textStream !== "" ? "\n" : "";
                     }
 

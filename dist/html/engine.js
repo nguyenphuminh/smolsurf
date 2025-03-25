@@ -349,6 +349,8 @@ class Compiler {
     }
     getContent(el) {
         const final = { textStream: "", options: { attachments: "" } };
+        // Utility variables for certain tags
+        let listIndex = 1;
         let suffix = "";
         // Get content from children
         for (let index = 0; index < el.children.length; index++) {
@@ -414,7 +416,12 @@ class Compiler {
                 case "li":
                     {
                         const prefix = this.getPrefix("\n", suffix, index);
-                        final.textStream += `${prefix}- ${textStream}`;
+                        let listStyle = "•";
+                        if (el.name === "ol") {
+                            listStyle = listIndex.toString() + ".";
+                            listIndex++;
+                        }
+                        final.textStream += `${prefix}${listStyle} ${textStream}`;
                         suffix = textStream !== "" ? "\n" : "";
                     }
                     break;
