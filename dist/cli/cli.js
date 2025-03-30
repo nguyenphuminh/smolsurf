@@ -202,7 +202,7 @@ class CLI {
                     throw new Error();
             }
             catch (e) {
-                finalUrl = "https://www.mojeek.com/search?q=" + encodeURIComponent(url);
+                finalUrl = "https://html.duckduckgo.com/html/?q=" + encodeURIComponent(url);
             }
             const response = await fetch(finalUrl);
             const contentType = response.headers.get("content-type");
