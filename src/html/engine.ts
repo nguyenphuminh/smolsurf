@@ -489,12 +489,10 @@ export class Compiler {
                 case "p":
                 case "ul":
                 case "ol":
-                    {
-                        if (textStream !== "") {
-                            const prefix = this.getPrefix("\n\n", suffix, noPrefix);
-                            final.textStream += `${prefix}${textStream}`;
-                            suffix = "\n\n";
-                        }
+                    if (textStream !== "") {
+                        const prefix = this.getPrefix("\n\n", suffix, noPrefix);
+                        final.textStream += `${prefix}${textStream}`;
+                        suffix = "\n\n";
                     }
 
                     break;
@@ -505,35 +503,29 @@ export class Compiler {
                 case "h4":
                 case "h5":
                 case "h6":
-                    {
-                        if (textStream !== "") {
-                            const prefix = this.getPrefix("\n\n", suffix, noPrefix);
-                            final.textStream += `${prefix}\x1b[1m${textStream}\x1b[0m`;
-                            suffix = "\n\n";
-                        }
+                    if (textStream !== "") {
+                        const prefix = this.getPrefix("\n\n", suffix, noPrefix);
+                        final.textStream += `${prefix}\x1b[1m${textStream}\x1b[0m`;
+                        suffix = "\n\n";
                     }
 
                     break;
 
                 case "br":
                 case "hr":
-                    {
-                        const prefix = this.getPrefix("", suffix, noPrefix);
-                        final.textStream += `${prefix}\n`;
-                        suffix = "";
-                    }
+                    const prefix = this.getPrefix("", suffix, noPrefix);
+                    final.textStream += `${prefix}\n`;
+                    suffix = "";
 
                     break;
 
                 case "div":
                 case "section":
                 case "article":
-                    {
-                        if (textStream !== "") {
-                            const prefix = this.getPrefix("\n", suffix, noPrefix);
-                            final.textStream += `${prefix}${textStream}`;
-                            suffix = "\n";
-                        }
+                    if (textStream !== "") {
+                        const prefix = this.getPrefix("\n", suffix, noPrefix);
+                        final.textStream += `${prefix}${textStream}`;
+                        suffix = "\n";
                     }
 
                     break;
@@ -567,46 +559,38 @@ export class Compiler {
 
                 case "b":
                 case "strong":
-                    {
-                        if (textStream !== "") {
-                            const prefix = this.getPrefix("", suffix, noPrefix);
-                            final.textStream += `${prefix}\x1b[1m${textStream}\x1b[0m`;
-                            suffix = "";
-                        }   
+                    if (textStream !== "") {
+                        const prefix = this.getPrefix("", suffix, noPrefix);
+                        final.textStream += `${prefix}\x1b[1m${textStream}\x1b[0m`;
+                        suffix = "";
                     }
 
                     break;
 
                 case "i":
                 case "cite":
-                    {
-                        if (textStream !== "") {
-                            const prefix = this.getPrefix("", suffix, noPrefix);
-                            final.textStream += `${prefix}\x1b[3m${textStream}\x1b[0m`;
-                            suffix = "";
-                        }
+                    if (textStream !== "") {
+                        const prefix = this.getPrefix("", suffix, noPrefix);
+                        final.textStream += `${prefix}\x1b[3m${textStream}\x1b[0m`;
+                        suffix = "";
                     }
 
                     break;
 
                 case "u":
-                    {
-                        if (textStream !== "") {
-                            const prefix = this.getPrefix("", suffix, noPrefix);
-                            final.textStream += `${prefix}\x1b[4m${textStream}\x1b[0m`;
-                            suffix = "";
-                        }
+                    if (textStream !== "") {
+                        const prefix = this.getPrefix("", suffix, noPrefix);
+                        final.textStream += `${prefix}\x1b[4m${textStream}\x1b[0m`;
+                        suffix = "";
                     }
 
                     break;
 
                 case "strike":
-                    {
-                        if (textStream !== "") {
-                            const prefix = this.getPrefix("", suffix, noPrefix);
-                            final.textStream += `${prefix}\x1b[9m${textStream}\x1b[0m`;
-                            suffix = "";
-                        }
+                    if (textStream !== "") {
+                        const prefix = this.getPrefix("", suffix, noPrefix);
+                        final.textStream += `${prefix}\x1b[9m${textStream}\x1b[0m`;
+                        suffix = "";
                     }
 
                     break;
@@ -621,27 +605,23 @@ export class Compiler {
                     break;
 
                 case "mark":
-                    {
-                        if (textStream !== "") {
-                            const prefix = this.getPrefix("", suffix, noPrefix);
-                            final.textStream += `${prefix}\x1b[7m${textStream}\x1b[27m`;
-                            suffix = "";
-                        }
+                    if (textStream !== "") {
+                        const prefix = this.getPrefix("", suffix, noPrefix);
+                        final.textStream += `${prefix}\x1b[7m${textStream}\x1b[27m`;
+                        suffix = "";
                     }
 
                     break;
 
                 case "a":
-                    {
-                        if (textStream !== "") {
-                            if (typeof childEl.attributes.href === "string") {
-                                final.options.attachments += `\x1b[1;4m${childEl.attributes.href}\x1b[0m: ${textStream}\n`;
-                            }
-    
-                            const prefix = this.getPrefix("", suffix, noPrefix);
-                            final.textStream += `${prefix}\x1b[1;4m${textStream}\x1b[0m`;
-                            suffix = "";
+                    if (textStream !== "") {
+                        if (typeof childEl.attributes.href === "string") {
+                            final.options.attachments += `\x1b[1;4m${childEl.attributes.href}\x1b[0m: ${textStream}\n`;
                         }
+
+                        const prefix = this.getPrefix("", suffix, noPrefix);
+                        final.textStream += `${prefix}\x1b[1;4m${textStream}\x1b[0m`;
+                        suffix = "";
                     }
 
                     break;
@@ -652,7 +632,7 @@ export class Compiler {
 
                 // Unknown tags are treated as text
                 default:
-                    {
+                    if (textStream !== "") {
                         const prefix = this.getPrefix("", suffix, noPrefix);
                         final.textStream += prefix + textStream;
                         suffix = "";
